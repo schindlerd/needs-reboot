@@ -1,0 +1,88 @@
+#!/usr/bin/python -tt
+
+# PURPOSE:
+# Small python script to check if reboot is recommended since last
+# package installation or yum update actions.
+#
+# Based on "needs-restarting" command from yum-utils package.
+#
+# CHANGELOG:
+# 1.0  2017-11-30 - initial release
+#
+################################################################################
+# Copyright (C) 2017 Daniel Schindler
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 3 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, see <http://www.gnu.org/licenses>.
+################################################################################
+
+import sys
+import os
+import yum
+import yum.misc
+import glob
+import stat
+from optparse import OptionParser
+from yum.Errors import RepoError
+sys.path.insert(0,'/usr/share/yum-cli')
+import utils
+
+# For which package updates we should recommend a reboot
+# Taken from https://access.redhat.com/solutions/27943
+REBOOTPKGS = ['kernel', 'kernel-uek', 'kernel-uek-firmware', 'glibc', 'linux-firmware', 'systemd', 'udev','openssl-libs', 'gnutls', 'dbus', 'hal']
+
+def parseargs(args):
+    usage = """usage: %prog
+
+Check if reboot is recommended (returns 1) or not (returns 0) since last package/yum update."""
+
+    parser = OptionParser(usage)
+
+    (opts, args) = parser.parse_args(args)
+    return (opts, args)
+
+def main(args):
+    (opts, args)  = parseargs(args)
+    my = yum.YumBase()
+    my.preconf.init_plugins=False
+    if hasattr(my, 'setCacheDir'):
+        my.setCacheDir()
+    my.conf.cache = True
+
+    boot_time = utils.get_boot_time()
+
+    needing_reboot = set()
+    for pkg in my.rpmdb.searchNames(REBOOTPKGS):
+        if float(pkg.installtime) > float(boot_time):
+                needing_reboot.add(pkg)
+    if needing_reboot:
+         print 'Core libraries or services have been updated:'
+         for pkg in needing_reboot:
+             print '  %s ->' % pkg.name, pkg.printVer()
+         print
+         print 'Reboot is recommended to ensure that your system benefits',
+         print 'from these updates.'
+         print
+         print 'More information:'
+         print 'https://access.redhat.com/solutions/27943'
+         return 1
+    else:
+         print 'No core libraries or services have been updated.'
+         print 'Reboot is probably not necessary.'
+         return 0
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv))
+    except RepoError, e:
+        print >>sys.stderr, e
+        sys.exit(1)
