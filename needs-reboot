@@ -7,6 +7,7 @@
 # Based on "needs-restarting" command from yum-utils package.
 #
 # CHANGELOG:
+# 1.1  2018-01-08 - added microcode_ctl as relevant REBOOTPKG
 # 1.0  2017-11-30 - initial release
 #
 ################################################################################
@@ -38,7 +39,7 @@ import utils
 
 # For which package updates we should recommend a reboot
 # Taken from https://access.redhat.com/solutions/27943
-REBOOTPKGS = ['kernel', 'kernel-uek', 'kernel-uek-firmware', 'glibc', 'linux-firmware', 'systemd', 'udev','openssl-libs', 'gnutls', 'dbus', 'hal']
+REBOOTPKGS = ['kernel', 'kernel-uek', 'kernel-uek-firmware', 'glibc', 'linux-firmware', 'systemd', 'udev', 'openssl-libs', 'gnutls', 'dbus', 'hal', 'microcode_ctl']
 
 def parseargs(args):
     usage = """usage: %prog
